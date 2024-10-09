@@ -78,7 +78,8 @@ public class PlayerController : MonoBehaviourPunCallbacks
 
     private void Start()
     {
-        playerCam = GameObject.FindWithTag("MainCamera").transform;
+        if(!playerCam)
+            playerCam = GameObject.FindWithTag("MainCamera").transform;
 
         playerName.text = GetComponent<PhotonView>().Controller.NickName;
         volumeIcon.text = ""; 
