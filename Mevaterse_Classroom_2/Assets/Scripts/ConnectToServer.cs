@@ -134,9 +134,19 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
         if (playerCam != null)
         {
             CameraController followScript = playerCam.GetComponent<CameraController>();
+            
             if (followScript != null)
             {
                 followScript.target = myPlayer;
+            }
+            else
+            {
+                GameObject cameraRig = GameObject.FindWithTag("CameraRig");
+                if (cameraRig)
+                {
+                    cameraRig.transform.position = myPlayer.transform.position;
+                    myPlayer.transform.parent = cameraRig.transform;
+                }
             }
         }
     }
