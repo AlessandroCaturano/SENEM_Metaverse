@@ -61,6 +61,13 @@ public class PlayerController : MonoBehaviourPunCallbacks
     private Vector3 spawnPosition;
     public AudioSource clapSound;
 
+    // Vr controls check
+    bool vrMode = true;
+    Transform cameraRig;
+    bool vrRaiseHand = false;
+    bool vrClap = false;
+    bool vrWave = false;
+
     public override void OnEnable()
     {
         move.Enable();
@@ -113,12 +120,14 @@ public class PlayerController : MonoBehaviourPunCallbacks
         gameObject.SetActive(false);
         transform.position = spawnPosition + new Vector3((float)(-photonView.ViewID)/10000f, 0, 0);        
         gameObject.SetActive(true);
+
+        cameraRig = GameObject.FindWithTag("CameraRig").transform;
     }
 
     private void Update()
     {
         if (!photonView.IsMine) { return; }
-
+        
         controller.Move(velocity * Time.deltaTime);
 
         // Camera Movement
@@ -141,16 +150,29 @@ public class PlayerController : MonoBehaviourPunCallbacks
             rotY = Mathf.Clamp(rotY, -10, +10);
         }
 
-        playerRoot.rotation = Quaternion.Euler(0f, rotY, 0f);
-        //playerCam.localRotation = Quaternion.Euler(rotX, 0f, 0f);
-        playerCam.rotation = Quaternion.Euler(rotX, 0f, 0f);
-
+        if (!vrMode) { 
+            playerRoot.rotation = Quaternion.Euler(0f, rotY, 0f);
+            //playerCam.localRotation = Quaternion.Euler(rotX, 0f, 0f);
+            playerCam.rotation = Quaternion.Euler(rotX, 0f, 0f);
+        }
+        else
+        {
+            playerRoot.rotation = Quaternion.Euler(0f, cameraRig.rotation.y, 0f);
+        }
 
         // Player Movement
         Vector2 moveInput = move.ReadValue<Vector2>();
-        Vector3 moveVelocity = playerRoot.forward * moveInput.y + playerRoot.right * moveInput.x;        
+        Vector3 moveVelocity = playerRoot.forward * moveInput.y + playerRoot.right * moveInput.x;
         
-        controller.Move(moveVelocity * speed * Time.deltaTime);
+        if (vrMode)
+        {
+            // Follow the camera rig movements
+            Vector3 direction = cameraRig.transform.position - transform.position;
+            controller.Move(direction);
+
+        }
+        else
+            controller.Move(moveVelocity * speed * Time.deltaTime);
 
         isGrounded = Physics.Raycast(feet.position, feet.TransformDirection(Vector3.down), 0.50f);
 
@@ -211,6 +233,34 @@ public class PlayerController : MonoBehaviourPunCallbacks
 
     }
 
+    public void VRToggleSit()
+    {
+        if (chair != null && !chair.GetComponent<ChairController>().IsBusy() && !isSitting && !isMoving && !isBackwardMoving && !textChat.isSelected)
+        {
+            Seat();
+        }
+        else if (isSitting && !Input.GetKey(KeyCode.W) &&
+            !Input.GetKey(KeyCode.A) && !Input.GetKey(KeyCode.S) && !Input.GetKey(KeyCode.D) && !textChat.isSelected && !isTyping)
+        {
+            GetUp();
+        }
+    }
+
+    public void VRClap(bool val)
+    {
+        vrClap = val;
+    }
+
+    public void VRWave(bool val)
+    {
+        vrWave = val;
+    }
+
+    public void VRRaiseHand(bool val)
+    {
+        vrRaiseHand = val;
+    }
+
     private void LateUpdate()
     {
         // Locks and unlocks the mouse if the player press ESC or the right mouse button
@@ -259,17 +309,17 @@ public class PlayerController : MonoBehaviourPunCallbacks
             animatorController.SetBool("IsMovingBackward", false);
         }
 
-        if (Input.GetKey(KeyCode.M) && handRaiseCooldown <= 0 && !textChat.isSelected && !isTyping)
+        if ((Input.GetKey(KeyCode.M) || vrRaiseHand) && handRaiseCooldown <= 0 && !textChat.isSelected && !isTyping)
         {
             handRaised = true;
         }
 
-        if (Input.GetKey(KeyCode.N) && !textChat.isSelected && !isTyping)
+        if ((Input.GetKey(KeyCode.N) || vrWave) && !textChat.isSelected && !isTyping)
         {
             isWaving = true;
         }
 
-        if (Input.GetKey(KeyCode.V) && !textChat.isSelected && !isTyping)
+        if ((Input.GetKey(KeyCode.V) || vrClap)&& !textChat.isSelected && !isTyping)
         {
             isClapping = true;
         }
