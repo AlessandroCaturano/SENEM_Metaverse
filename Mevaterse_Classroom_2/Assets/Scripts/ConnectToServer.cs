@@ -145,7 +145,7 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
                 if (cameraRig)
                 {
                     cameraRig.transform.position = myPlayer.transform.position;
-                    FindObjectOfType<RigPlayerInterface>().Controller = myPlayer.GetComponent<PlayerController>();
+                    FindObjectOfType<RigPlayerInterface>().Initialize(myPlayer);
                 }
             }
         }

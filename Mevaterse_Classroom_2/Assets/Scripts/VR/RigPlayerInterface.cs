@@ -5,16 +5,26 @@ using UnityEngine;
 public class RigPlayerInterface : MonoBehaviour
 {
     private PlayerController controller;
+    private PlayerVoiceController voiceController;
+    private GameObject movementHandler;
 
     bool raiseHand = false;
     bool wave = false;
     bool clap = false;
+    Vector2 movement;
 
-    public PlayerController Controller { get => controller; set => controller = value; }
+    public void Initialize(GameObject player)
+    {
+        controller = player.GetComponent<PlayerController>();
+        voiceController = player.GetComponent<PlayerVoiceController>();
+    }
 
     public void ToggleSit()
     {
-        controller.VRToggleSit();
+        if (controller.VRToggleSit())
+            movementHandler.SetActive(false);
+        else
+            movementHandler.SetActive(true);
     }
 
     public void RaiseHand(bool val)
@@ -32,10 +42,21 @@ public class RigPlayerInterface : MonoBehaviour
         clap = val;
     }
 
+    public void SetMovement(Vector2 movement)
+    {
+        this.movement = movement;
+    }
+
+    public void VoiceChat()
+    {
+        voiceController.ToggleVRVoiceChat();
+    }
+
     void Update()
     {
         controller.VRRaiseHand(raiseHand);
-        controller.VRWave(val);
-        controller.VRClap(val);
+        controller.VRWave(wave);
+        controller.VRClap(clap);
+        controller.UpdateVRMovement(movement);
     }
 }

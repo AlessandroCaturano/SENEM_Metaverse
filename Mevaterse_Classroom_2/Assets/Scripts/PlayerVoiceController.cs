@@ -21,6 +21,13 @@ public class PlayerVoiceController : MonoBehaviourPunCallbacks
     public bool isTalking;
     private bool isTyping;
 
+    bool vrVoiceChat = false;
+
+    public void SetVRVoiceChat(bool voiceChat)
+    {
+        vrVoiceChat = voiceChat;
+    }
+
     private void Start()
     {
         recorder = GameObject.Find("VoiceManager").GetComponent<Recorder>();
@@ -51,7 +58,7 @@ public class PlayerVoiceController : MonoBehaviourPunCallbacks
 
         isTyping = gameObject.GetComponent<PlayerController>().isTyping;
 
-        if (Input.GetKeyUp(KeyCode.Tab) && !speaker.enabled && !textChat.isSelected && !isTyping)
+        if ((Input.GetKeyUp(KeyCode.Tab)) && !speaker.enabled && !textChat.isSelected && !isTyping)
         {
             view.RPC("ToggleMicRpc", RpcTarget.All, true);
             microphoneIndicator.text = unmuteMsg;
@@ -72,6 +79,20 @@ public class PlayerVoiceController : MonoBehaviourPunCallbacks
         {
             isTalking = false;
             info.text = "";
+        }
+    }
+
+    public void ToggleVRVoiceChat()
+    {
+        if (!speaker.enabled && !textChat.isSelected && !isTyping)
+        {
+            view.RPC("ToggleMicRpc", RpcTarget.All, true);
+            microphoneIndicator.text = unmuteMsg;
+        }
+        else if (speaker.enabled && !textChat.isSelected && !isTyping)
+        {
+            view.RPC("ToggleMicRpc", RpcTarget.All, false);
+            microphoneIndicator.text = muteMsg;
         }
     }
 

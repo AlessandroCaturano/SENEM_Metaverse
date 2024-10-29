@@ -67,6 +67,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
     bool vrRaiseHand = false;
     bool vrClap = false;
     bool vrWave = false;
+    Vector2 vrMovement;
 
     public override void OnEnable()
     {
@@ -233,17 +234,17 @@ public class PlayerController : MonoBehaviourPunCallbacks
 
     }
 
-    public void VRToggleSit()
+    public bool VRToggleSit()
     {
         if (chair != null && !chair.GetComponent<ChairController>().IsBusy() && !isSitting && !isMoving && !isBackwardMoving && !textChat.isSelected)
         {
             Seat();
         }
-        else if (isSitting && !Input.GetKey(KeyCode.W) &&
-            !Input.GetKey(KeyCode.A) && !Input.GetKey(KeyCode.S) && !Input.GetKey(KeyCode.D) && !textChat.isSelected && !isTyping)
+        else if (isSitting && vrMovement.magnitude < 0.01f && !textChat.isSelected && !isTyping)
         {
             GetUp();
         }
+        return isSitting;
     }
 
     public void VRClap(bool val)
@@ -259,6 +260,11 @@ public class PlayerController : MonoBehaviourPunCallbacks
     public void VRRaiseHand(bool val)
     {
         vrRaiseHand = val;
+    }
+
+    public void UpdateVRMovement(Vector2 movement)
+    {
+        vrMovement = movement;
     }
 
     private void LateUpdate()
@@ -284,7 +290,10 @@ public class PlayerController : MonoBehaviourPunCallbacks
 
     void AnimatorChecker(Vector3 moveVelocity)
     {
-        isMoving = ((moveVelocity.x != 0 || moveVelocity.y != 0 || moveVelocity.z != 0) && !textChat.isSelected && !isTyping);
+        if (!vrMode)
+            isMoving = ((moveVelocity.x != 0 || moveVelocity.y != 0 || moveVelocity.z != 0) && !textChat.isSelected && !isTyping);
+        else
+            isMoving = ((vrMovement.x != 0 || vrMovement.y != 0) && !textChat.isSelected && !isTyping);
         isBackwardMoving = false;
         handRaised = false;
         isWaving = false;
@@ -292,7 +301,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
         isTyping = /*(GetComponent<TabletSpawner>().tablet.GetComponent<TabletManager>().isBeingEdited) || */(PhotonNetwork.LocalPlayer.UserId == Presenter.Instance.writerID);
 
         // If the player is walking backward, this changes the animation and slows down the speed
-        if (Input.GetKey(KeyCode.S) && !textChat.isSelected && !isTyping)
+        if ((Input.GetKey(KeyCode.S) || vrMovement.y < 0) && !textChat.isSelected && !isTyping)
         {
             isBackwardMoving = true;
             isMoving = false;
