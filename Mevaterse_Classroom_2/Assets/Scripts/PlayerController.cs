@@ -214,7 +214,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
             handRaiseCooldown -= Time.deltaTime;
 
         // If the player presses M, the character raises their hand
-        if (Input.GetKeyUp(KeyCode.M) && handRaiseCooldown <= 0 && !textChat.isSelected && !isTyping)
+        if ((Input.GetKeyUp(KeyCode.M) || vrRaiseHand) && handRaiseCooldown <= 0 && !textChat.isSelected && !isTyping)
         {
             RaiseHand();
             handRaiseCooldown = 10;

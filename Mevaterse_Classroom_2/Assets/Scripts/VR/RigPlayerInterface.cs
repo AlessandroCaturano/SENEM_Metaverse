@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class RigPlayerInterface : MonoBehaviour
 {
+    [SerializeField] GameObject keyboard;
+    private TextChat textChat;
     private PlayerController controller;
     private PlayerVoiceController voiceController;
     private GameObject movementHandler;
@@ -11,12 +13,14 @@ public class RigPlayerInterface : MonoBehaviour
     bool raiseHand = false;
     bool wave = false;
     bool clap = false;
+    bool vrChat = false;
     Vector2 movement;
 
     public void Initialize(GameObject player)
     {
         controller = player.GetComponent<PlayerController>();
         voiceController = player.GetComponent<PlayerVoiceController>();
+        textChat = GameObject.Find("TextChat").GetComponent<TextChat>();
     }
 
     public void ToggleSit()
@@ -50,6 +54,12 @@ public class RigPlayerInterface : MonoBehaviour
     public void VoiceChat()
     {
         voiceController.ToggleVRVoiceChat();
+    }
+
+    public bool TextChat()
+    {
+        keyboard.SetActive(textChat.VRToggleTextChat());
+
     }
 
     void Update()
