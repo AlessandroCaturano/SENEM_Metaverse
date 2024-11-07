@@ -15,6 +15,7 @@ TagManager:
   - Whiteboard
   - PlayerName
   - CameraRig
+  - VRCamera
   layers:
   - Default
   - TransparentFX

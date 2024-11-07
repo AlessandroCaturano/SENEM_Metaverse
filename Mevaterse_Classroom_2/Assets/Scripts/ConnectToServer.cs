@@ -139,15 +139,14 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
             {
                 followScript.target = myPlayer;
             }
-            else
-            {
-                GameObject cameraRig = GameObject.FindWithTag("CameraRig");
-                if (cameraRig)
-                {
-                    cameraRig.transform.position = myPlayer.transform.position;
-                    FindObjectOfType<RigPlayerInterface>().Initialize(myPlayer);
-                }
-            }
+        }
+
+        GameObject cameraRig = GameObject.FindWithTag("VRCamera");
+        if (cameraRig)
+        {
+            cameraRig.transform.position = myPlayer.transform.position;
+            FindObjectOfType<RigPlayerInterface>().Initialize(myPlayer);
+            cameraRig.transform.parent.parent.gameObject.SetActive(false);
         }
     }
 

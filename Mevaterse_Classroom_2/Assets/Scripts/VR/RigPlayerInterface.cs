@@ -25,10 +25,7 @@ public class RigPlayerInterface : MonoBehaviour
 
     public void ToggleSit()
     {
-        if (controller.VRToggleSit())
-            movementHandler.SetActive(false);
-        else
-            movementHandler.SetActive(true);
+        movementHandler.SetActive(!controller.VRToggleSit());
     }
 
     public void RaiseHand(bool val)
@@ -56,14 +53,25 @@ public class RigPlayerInterface : MonoBehaviour
         voiceController.ToggleVRVoiceChat();
     }
 
-    public bool TextChat()
+    public void TextChat()
     {
         keyboard.SetActive(textChat.VRToggleTextChat());
+    }
 
+    public void ToggleWhiteBoard()
+    {
+        keyboard.SetActive(controller.VRToggleWhiteBoard());
+    }
+
+    public void ToggleVRMode()
+    {
+        controller.ToggleVRMode();
     }
 
     void Update()
     {
+        if (!controller)
+            return;
         controller.VRRaiseHand(raiseHand);
         controller.VRWave(wave);
         controller.VRClap(clap);

@@ -86,6 +86,8 @@ public class PlayerController : MonoBehaviourPunCallbacks
 
     private void Start()
     {
+        ToggleVRMode();
+        
         if(!playerCam)
             playerCam = GameObject.FindWithTag("MainCamera").transform;
 
@@ -220,6 +222,11 @@ public class PlayerController : MonoBehaviourPunCallbacks
             handRaiseCooldown = 10;
         }
 
+        if ((Input.GetKeyUp(KeyCode.P) || vrRaiseHand) && !textChat.isSelected && !isTyping)
+        {
+            ToggleVRMode();
+        }
+
         if (textChat.isSelected || isTyping)
         {
             controller.enabled = false;
@@ -232,6 +239,33 @@ public class PlayerController : MonoBehaviourPunCallbacks
         AnimatorChecker(moveVelocity);
         InteractionInfoUpdate();
 
+    }
+
+    public void ToggleVRMode()
+    {
+        vrMode = !vrMode;
+        playerCam.gameObject.SetActive(!vrMode);
+        cameraRig.gameObject.SetActive(vrMode);
+        if (vrMode)
+        {
+            cameraRig.transform.position = transform.position;
+        }
+
+    }
+
+    public bool VRToggleWhiteBoard()
+    {
+        if (whiteBoard != null && !whiteBoard.isBeingEdited && !textChat.isSelected)
+        {
+            EditWhiteboard();
+            return true;
+        }
+        else if (whiteBoard != null && whiteBoard.isBeingEdited &&
+            Presenter.Instance.writerID == PhotonNetwork.LocalPlayer.UserId && !textChat.isSelected)
+        {
+            StopEditWhiteboard();
+        }
+        return false;
     }
 
     public bool VRToggleSit()
