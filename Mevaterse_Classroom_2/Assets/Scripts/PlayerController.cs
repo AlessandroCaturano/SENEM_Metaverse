@@ -5,6 +5,7 @@ using TMPro;
 using UnityEngine.EventSystems;
 using Photon.Realtime;
 using System;
+using TMPro.Examples;
 
 public class PlayerController : MonoBehaviourPunCallbacks
 {
@@ -56,10 +57,19 @@ public class PlayerController : MonoBehaviourPunCallbacks
     private float originalFov;
 
     public Animator animatorController;
-    private TMP_Text interactionInfo;
+    [SerializeField] private TMP_Text interactionInfo;
     private ControlInfoHanlder commandInfo;
     private Vector3 spawnPosition;
     public AudioSource clapSound;
+
+    // Vr controls check
+    GameObject vrObjects;
+    bool vrMode = false;
+    Transform cameraRig;
+    bool vrRaiseHand = false;
+    bool vrClap = false;
+    bool vrWave = false;
+    Vector2 vrMovement;
 
     public override void OnEnable()
     {
@@ -78,18 +88,8 @@ public class PlayerController : MonoBehaviourPunCallbacks
 
     private void Start()
     {
-        PhotonNetwork.OfflineMode = true;
-        if (PhotonNetwork.OfflineMode)
-        {
-            Debug.Log("Game is in offline mode.");
-        }
-        else
-        {
-            Debug.Log("Game is in online mode.");
-        }
-
-        playerCam = GameObject.FindWithTag("MainCamera").transform;
-
+        if (!playerCam)
+            playerCam = GameObject.FindWithTag("MainCamera").transform;
         playerName.text = GetComponent<PhotonView>().Controller.NickName;
         volumeIcon.text = ""; 
         boardText = $"{DateTime.UtcNow.Date.ToString("MM/dd/yyyy")}";
@@ -107,7 +107,6 @@ public class PlayerController : MonoBehaviourPunCallbacks
         // Variables inizialitazion
         controller = GetComponent<CharacterController>();
         idleTime = 0;
-        handRaiseCooldown = 10;
         originalSpeed = speed;
         originalFov = playerCam.GetComponent<Camera>().fieldOfView;
         backwardSpeed = originalSpeed - 1.3f;
@@ -122,12 +121,17 @@ public class PlayerController : MonoBehaviourPunCallbacks
         gameObject.SetActive(false);
         transform.position = spawnPosition + new Vector3((float)(-photonView.ViewID)/10000f, 0, 0);        
         gameObject.SetActive(true);
+
+        GameObject.FindWithTag("VRCamera").GetComponent<AudioListener>().enabled = true;
+        cameraRig = GameObject.FindWithTag("CameraRig").transform;
+        vrObjects = GameObject.FindWithTag("VRObjects");
+        vrObjects.SetActive(false);
     }
 
     private void Update()
     {
         if (!photonView.IsMine) { return; }
-
+        
         controller.Move(velocity * Time.deltaTime);
 
         // Camera Movement
@@ -150,16 +154,29 @@ public class PlayerController : MonoBehaviourPunCallbacks
             rotY = Mathf.Clamp(rotY, -10, +10);
         }
 
-        playerRoot.rotation = Quaternion.Euler(0f, rotY, 0f);
-        //playerCam.localRotation = Quaternion.Euler(rotX, 0f, 0f);
-        playerCam.rotation = Quaternion.Euler(rotX, 0f, 0f);
-
+        if (!vrMode) { 
+            playerRoot.rotation = Quaternion.Euler(0f, rotY, 0f);
+            //playerCam.localRotation = Quaternion.Euler(rotX, 0f, 0f);
+            playerCam.rotation = Quaternion.Euler(rotX, 0f, 0f);
+        }
+        else
+        {
+            playerRoot.rotation = Quaternion.Euler(0f, cameraRig.rotation.y, 0f);
+        }
 
         // Player Movement
         Vector2 moveInput = move.ReadValue<Vector2>();
-        Vector3 moveVelocity = playerRoot.forward * moveInput.y + playerRoot.right * moveInput.x;        
+        Vector3 moveVelocity = playerRoot.forward * moveInput.y + playerRoot.right * moveInput.x;
         
-        controller.Move(moveVelocity * speed * Time.deltaTime);
+        if (vrMode)
+        {
+            // Follow the camera rig movements
+            Vector3 direction = cameraRig.transform.position - transform.position;
+            controller.Move(direction);
+
+        }
+        else
+            controller.Move(moveVelocity * speed * Time.deltaTime);
 
         isGrounded = Physics.Raycast(feet.position, feet.TransformDirection(Vector3.down), 0.50f);
 
@@ -200,10 +217,15 @@ public class PlayerController : MonoBehaviourPunCallbacks
             handRaiseCooldown -= Time.deltaTime;
 
         // If the player presses M, the character raises their hand
-        if (Input.GetKeyUp(KeyCode.M) && handRaiseCooldown <= 0 && !textChat.isSelected && !isTyping)
+        if ((Input.GetKeyUp(KeyCode.M) || vrRaiseHand) && handRaiseCooldown <= 0 && !textChat.isSelected && !isTyping)
         {
             RaiseHand();
             handRaiseCooldown = 10;
+        }
+
+        if (Input.GetKeyUp(KeyCode.P) && !textChat.isSelected && !isTyping)
+        {
+            ToggleVRMode();
         }
 
         if (textChat.isSelected || isTyping)
@@ -218,6 +240,66 @@ public class PlayerController : MonoBehaviourPunCallbacks
         AnimatorChecker(moveVelocity);
         InteractionInfoUpdate();
 
+    }
+
+    public void ToggleVRMode()
+    {
+        vrMode = !vrMode;
+        vrObjects.gameObject.SetActive(vrMode);
+        playerCam.gameObject.SetActive(!vrMode);
+        if (vrMode)
+        {
+            vrObjects.transform.position = transform.position;
+        }
+
+    }
+
+    public bool VRToggleWhiteBoard()
+    {
+        if (whiteBoard != null && !whiteBoard.isBeingEdited && !textChat.isSelected)
+        {
+            EditWhiteboard();
+            return true;
+        }
+        else if (whiteBoard != null && whiteBoard.isBeingEdited &&
+            Presenter.Instance.writerID == PhotonNetwork.LocalPlayer.UserId && !textChat.isSelected)
+        {
+            StopEditWhiteboard();
+        }
+        return false;
+    }
+
+    public bool VRToggleSit()
+    {
+        if (chair != null && !chair.GetComponent<ChairController>().IsBusy() && !isSitting && !isMoving && !isBackwardMoving && !textChat.isSelected)
+        {
+            Seat();
+        }
+        else if (isSitting && vrMovement.magnitude < 0.01f && !textChat.isSelected && !isTyping)
+        {
+            GetUp();
+        }
+        return isSitting;
+    }
+
+    public void VRClap(bool val)
+    {
+        vrClap = val;
+    }
+
+    public void VRWave(bool val)
+    {
+        vrWave = val;
+    }
+
+    public void VRRaiseHand(bool val)
+    {
+        vrRaiseHand = val;
+    }
+
+    public void UpdateVRMovement(Vector2 movement)
+    {
+        vrMovement = movement;
     }
 
     private void LateUpdate()
@@ -243,7 +325,10 @@ public class PlayerController : MonoBehaviourPunCallbacks
 
     void AnimatorChecker(Vector3 moveVelocity)
     {
-        isMoving = ((moveVelocity.x != 0 || moveVelocity.y != 0 || moveVelocity.z != 0) && !textChat.isSelected && !isTyping);
+        if (!vrMode)
+            isMoving = ((moveVelocity.x != 0 || moveVelocity.y != 0 || moveVelocity.z != 0) && !textChat.isSelected && !isTyping);
+        else
+            isMoving = ((vrMovement.x != 0 || vrMovement.y != 0) && !textChat.isSelected && !isTyping);
         isBackwardMoving = false;
         handRaised = false;
         isWaving = false;
@@ -251,7 +336,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
         isTyping = /*(GetComponent<TabletSpawner>().tablet.GetComponent<TabletManager>().isBeingEdited) || */(PhotonNetwork.LocalPlayer.UserId == Presenter.Instance.writerID);
 
         // If the player is walking backward, this changes the animation and slows down the speed
-        if (Input.GetKey(KeyCode.S) && !textChat.isSelected && !isTyping)
+        if (((Input.GetKey(KeyCode.S) && !vrMode) || (vrMovement.y < 0 && vrMode)) && !textChat.isSelected && !isTyping)
         {
             isBackwardMoving = true;
             isMoving = false;
@@ -268,17 +353,17 @@ public class PlayerController : MonoBehaviourPunCallbacks
             animatorController.SetBool("IsMovingBackward", false);
         }
 
-        if (Input.GetKey(KeyCode.M) && handRaiseCooldown <= 0 && !textChat.isSelected && !isTyping)
+        if ((Input.GetKey(KeyCode.M) || vrRaiseHand) && handRaiseCooldown <= 0 && !textChat.isSelected && !isTyping)
         {
             handRaised = true;
         }
 
-        if (Input.GetKey(KeyCode.N) && !textChat.isSelected && !isTyping)
+        if ((Input.GetKey(KeyCode.N) || vrWave) && !textChat.isSelected && !isTyping)
         {
             isWaving = true;
         }
 
-        if (Input.GetKey(KeyCode.V) && !textChat.isSelected && !isTyping)
+        if ((Input.GetKey(KeyCode.V) || vrClap)&& !textChat.isSelected && !isTyping)
         {
             isClapping = true;
         }

@@ -1,5 +1,3 @@
-using System;
-using System.Threading;
 using Photon.Voice.Unity;
 using UnityEngine;
 using TMPro;
@@ -19,26 +17,25 @@ public class PlayerVoiceController : MonoBehaviourPunCallbacks
     private TextChat textChat;
 
     public Speaker speaker;
-    public AudioSource audioSource,
-                    outputSource; // Audio source for the output audio
+    public AudioSource audioSource;
     public bool isTalking;
     private bool isTyping;
 
-    private QuestionDispatcher questionDispatcher;
-    private const float leniencyPeriod = 3.0f;
-    private const int maxRecordingTime = 40;
-    private const int minRecordingTime = 3;
-    private float silenceTimer = 0.0f;
+    bool vrVoiceChat = false;
+
+    public void SetVRVoiceChat(bool voiceChat)
+    {
+        vrVoiceChat = voiceChat;
+    }
 
     private void Start()
     {
-        outputSource = gameObject.AddComponent<AudioSource>();
         recorder = GameObject.Find("VoiceManager").GetComponent<Recorder>();
         info = GameObject.Find("SoundState").GetComponent<TMP_Text>();
         microphoneIndicator = GameObject.Find("MicState").GetComponent<TMP_Text>();
         microphoneInfo = GameObject.Find("MicInfo").GetComponent<TMP_Text>();
 
-        view = GetComponent<PhotonView>();
+        view = this.GetComponent<PhotonView>();
         textChat = GameObject.Find("TextChat").GetComponent<TextChat>();
 
         info.text = "";
@@ -49,20 +46,24 @@ public class PlayerVoiceController : MonoBehaviourPunCallbacks
         if (photonView.IsMine)
         {
             microphoneIndicator.text = muteMsg;
+
             if (Microphone.devices.Length > 0)
                 microphoneInfo.text = $"Using: {Microphone.devices[0]}";
         }
     }
 
-    private void Update()
+    public void Update()
     {
         if (!view.IsMine) return;
 
-        if (Input.GetKeyUp(KeyCode.Tab) && !speaker.enabled && !textChat.isSelected && !isTyping)
+        isTyping = gameObject.GetComponent<PlayerController>().isTyping;
+
+        if ((Input.GetKeyUp(KeyCode.Tab)) && !speaker.enabled && !textChat.isSelected && !isTyping)
         {
             view.RPC("ToggleMicRpc", RpcTarget.All, true);
             microphoneIndicator.text = unmuteMsg;
         }
+
         else if (Input.GetKeyUp(KeyCode.Tab) && speaker.enabled && !textChat.isSelected && !isTyping)
         {
             view.RPC("ToggleMicRpc", RpcTarget.All, false);
@@ -73,87 +74,32 @@ public class PlayerVoiceController : MonoBehaviourPunCallbacks
         {
             isTalking = true;
             info.text = "<color=\"green\">Transmitting audio</color>";
-            if (Microphone.IsRecording(null))
-            {
-                silenceTimer = 0.0f;
-            }
-            else
-            {
-                Debug.Log("Starting recording");
-                outputSource.clip = Microphone.Start(null, false, maxRecordingTime, 44100);
-            }
         }
         else
         {
             isTalking = false;
             info.text = "";
-
-            if (Microphone.IsRecording(null) && (Presenter.Instance.presenterID == PhotonNetwork.LocalPlayer.UserId))
-            {
-                silenceTimer += Time.deltaTime;
-            }
-        }
-
-        if (silenceTimer >= leniencyPeriod && (Presenter.Instance.presenterID == PhotonNetwork.LocalPlayer.UserId))
-        {
-            StopRecording();
-            silenceTimer = 0.0f;
         }
     }
 
-    private void StopRecording()
+    public void ToggleVRVoiceChat()
     {
-        Debug.Log("Stopping recording");
-
-        if (Microphone.devices.Length == 0)
+        if (!speaker.enabled && !textChat.isSelected && !isTyping)
         {
-            Debug.LogError("No microphone detected.");
-            return;
+            view.RPC("ToggleMicRpc", RpcTarget.All, true);
+            microphoneIndicator.text = unmuteMsg;
         }
-
-        int position = Microphone.GetPosition(null);
-        Microphone.End(null);
-
-        if (outputSource == null || outputSource.clip == null || position <= 0)
+        else if (speaker.enabled && !textChat.isSelected && !isTyping)
         {
-            Debug.LogWarning("No audio data recorded.");
-            return;
+            view.RPC("ToggleMicRpc", RpcTarget.All, false);
+            microphoneIndicator.text = muteMsg;
         }
-
-        CorrectAudioClipLength(outputSource, position);
-
-        if (outputSource.clip == null || outputSource.clip.length <= minRecordingTime)
-        {
-            Debug.Log("Audio clip is too short");
-            return;
-        }
-
-        NotifyStudents(outputSource.clip); // Notifica agli studenti che la clip è pronta
-
-        AudioClip.Destroy(outputSource.clip);
     }
 
-    private void CorrectAudioClipLength(AudioSource audioClip, int position)
+    public override void OnPlayerEnteredRoom(Player newPlayer)
     {
-        float[] soundData = new float[audioClip.clip.samples * audioClip.clip.channels];
-        audioClip.clip.GetData(soundData, 0);
-
-        float[] newData = new float[position * audioClip.clip.channels];
-        Array.Copy(soundData, newData, newData.Length);
-
-        AudioClip newClip = AudioClip.Create(audioClip.clip.name, position, audioClip.clip.channels, audioClip.clip.frequency, false);
-        newClip.SetData(newData, 0);
-        AudioClip.Destroy(audioClip.clip);
-        audioClip.clip = newClip;
-    }
-
-    private void NotifyStudents(AudioClip audioClip)
-    {
-        SmartStudentController[] students = FindObjectsOfType<SmartStudentController>();
-        foreach (var student in students)
-        {
-            student.EvaluateAudioForQuestion(audioClip); // Ogni studente fa il suo "roll" per inviare la richiesta
-        }
+        if (!photonView.IsMine) return;
+        view.RPC("ToggleMicRpc", RpcTarget.All, speaker.enabled);
     }
 
     [PunRPC]
@@ -162,4 +108,6 @@ public class PlayerVoiceController : MonoBehaviourPunCallbacks
         speaker.enabled = value;
         audioSource.enabled = value;
     }
+
 }
+

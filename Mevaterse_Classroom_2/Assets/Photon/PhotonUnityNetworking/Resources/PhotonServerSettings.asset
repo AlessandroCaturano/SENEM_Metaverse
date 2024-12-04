@@ -61,14 +61,6 @@ MonoBehaviour:
   - NotifyNewMaster
   - DisableCameraRPC
   - ClapRPC
-  - PlayAnimation
-  - RaiseHand
-  - SetStudentData
-  - AddQuestion
-  - PlayQuestion
-  - NotifyHandRaised
-  - AddQuestionToAll
-  - WriteQuestionInChat
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

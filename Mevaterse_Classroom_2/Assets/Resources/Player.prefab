@@ -2024,7 +2024,7 @@ GameObject:
   - component: {fileID: 3454065447111200833}
   - component: {fileID: 5962960645159405201}
   - component: {fileID: 3307938740233800537}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Player
   m_TagString: Player
   m_Icon: {fileID: 0}
@@ -2381,6 +2381,7 @@ MonoBehaviour:
   playerName: {fileID: 6856924244480619952}
   overhead: {fileID: 2432327588793178383}
   animatorController: {fileID: 7530163307746583883}
+  interactionInfo: {fileID: 0}
   clapSound: {fileID: 3307938740233800537}
 --- !u!114 &-3450968785330451029
 MonoBehaviour:
@@ -2424,7 +2425,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   speaker: {fileID: 8209585499014846409}
   audioSource: {fileID: 579588550582043748}
-  outputSource: {fileID: 0}
   isTalking: 0
 --- !u!114 &7866914327500232411
 MonoBehaviour:
